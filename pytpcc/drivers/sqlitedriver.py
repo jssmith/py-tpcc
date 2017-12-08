@@ -36,6 +36,7 @@ import sqlite3
 import logging
 import commands
 from pprint import pprint,pformat
+import sys
 
 import constants
 from abstractdriver import *
@@ -104,6 +105,8 @@ TXN_QUERIES = {
 class SqliteDriver(AbstractDriver):
     DEFAULT_CONFIG = {
         "database": ("The path to the SQLite database", "/tmp/tpcc.db" ),
+        "vfs": ("The SQLite VFS", "unix"),
+        "journal_mode": ("The journal mode, e.g., wal, delete, etc.", "delete")
     }
     
     def __init__(self, ddl):
@@ -124,24 +127,45 @@ class SqliteDriver(AbstractDriver):
     def loadConfig(self, config):
         for key in SqliteDriver.DEFAULT_CONFIG.keys():
             assert key in config, "Missing parameter '%s' in %s configuration" % (key, self.name)
-        
+
         self.database = str(config["database"])
-        
-        if config["reset"] and os.path.exists(self.database):
-            logging.debug("Deleting database '%s'" % self.database)
-            os.unlink(self.database)
-        
-        if os.path.exists(self.database) == False:
-            logging.debug("Loading DDL file '%s'" % (self.ddl))
-            ## HACK
-            cmd = "sqlite3 %s < %s" % (self.database, self.ddl)
-            (result, output) = commands.getstatusoutput(cmd)
-            assert result == 0, cmd + "\n" + output
+        self.vfs = str(config["vfs"])
+        self.journal_mode = str(config["journal_mode"])
+
+        # if config["reset"] and os.path.exists(self.database):
+        #     logging.debug("Deleting database '%s'" % self.database)
+        #     os.unlink(self.database)
+
+        # if os.path.exists(self.database) == False:
+        #     logging.debug("Loading DDL file '%s'" % (self.ddl))
+        #     ## HACK
+        #     cmd = "%s %s < %s" % (self.sqlite_exe, self.database, self.ddl)
+        #     (result, output) = commands.getstatusoutput(cmd)
+        #     assert result == 0, cmd + "\n" + output
         ## IF
-            
+
+        if self.vfs == 'nfs4':
+            init_conn = sqlite3.connect(":memory:")
+            init_conn.enable_load_extension(True)
+            init_conn.load_extension("./nfs4.so")
+            init_conn.close()
+        else:
+            assert self.vfs == "unix", "unsupported vfs"
+
         self.conn = sqlite3.connect(self.database)
         self.cursor = self.conn.cursor()
-    
+
+        if self.journal_mode == 'wal':
+            self.cursor.execute("PRAGMA locking_mode=EXCLUSIVE")
+            self.cursor.execute("PRAGMA journal_mode=WAL")
+        else:
+            assert self.journal_mode == "delete", "unsuported journal mode"
+
+        with open(self.ddl) as ddl:
+            ddl_statements = "".join([l for l in ddl if not l.startswith("--")]).split(";")
+        for statement in ddl_statements:
+            self.cursor.execute(statement);
+
     ## ----------------------------------------------
     ## loadTuples
     ## ----------------------------------------------
