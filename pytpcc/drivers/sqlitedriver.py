@@ -161,10 +161,11 @@ class SqliteDriver(AbstractDriver):
         else:
             assert self.journal_mode == "delete", "unsuported journal mode"
 
-        with open(self.ddl) as ddl:
-            ddl_statements = "".join([l for l in ddl if not l.startswith("--")]).split(";")
-        for statement in ddl_statements:
-            self.cursor.execute(statement);
+        if config["reset"]:
+            with open(self.ddl) as ddl:
+                ddl_statements = "".join([l for l in ddl if not l.startswith("--")]).split(";")
+            for statement in ddl_statements:
+                self.cursor.execute(statement);
 
     ## ----------------------------------------------
     ## loadTuples
