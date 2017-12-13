@@ -132,7 +132,7 @@ class SqliteDriver(AbstractDriver):
         self.database = str(config["database"])
         self.vfs = str(config["vfs"])
         self.journal_mode = str(config["journal_mode"])
-        self.locking = str(config(["locking_mode"]))
+        self.locking = str(config["locking_mode"])
 
         # if config["reset"] and os.path.exists(self.database):
         #     logging.debug("Deleting database '%s'" % self.database)
