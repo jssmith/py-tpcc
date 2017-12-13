@@ -106,7 +106,8 @@ class SqliteDriver(AbstractDriver):
     DEFAULT_CONFIG = {
         "database": ("The path to the SQLite database", "/tmp/tpcc.db" ),
         "vfs": ("The SQLite VFS", "unix"),
-        "journal_mode": ("The journal mode, e.g., wal, delete, etc.", "delete")
+        "journal_mode": ("The journal mode, e.g., wal, delete, etc.", "delete"),
+        "locking_mode": ("The locking mode, either normal or exclusive", "normal")
     }
     
     def __init__(self, ddl):
@@ -131,6 +132,7 @@ class SqliteDriver(AbstractDriver):
         self.database = str(config["database"])
         self.vfs = str(config["vfs"])
         self.journal_mode = str(config["journal_mode"])
+        self.locking = str(config(["locking_mode"]))
 
         # if config["reset"] and os.path.exists(self.database):
         #     logging.debug("Deleting database '%s'" % self.database)
@@ -155,8 +157,13 @@ class SqliteDriver(AbstractDriver):
         self.conn = sqlite3.connect(self.database)
         self.cursor = self.conn.cursor()
 
-        if self.journal_mode == 'wal':
+
+        if self.locking_mode == "exclusive":
             self.cursor.execute("PRAGMA locking_mode=EXCLUSIVE")
+        elif self.locking_mode:
+            assert self.locking_mode == "normal", "unsupported locking mode"
+
+        if self.journal_mode == 'wal':
             self.cursor.execute("PRAGMA journal_mode=WAL")
         else:
             assert self.journal_mode == "delete", "unsuported journal mode"
