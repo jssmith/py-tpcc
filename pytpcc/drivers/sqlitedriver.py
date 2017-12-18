@@ -107,7 +107,8 @@ class SqliteDriver(AbstractDriver):
         "database": ("The path to the SQLite database", "/tmp/tpcc.db" ),
         "vfs": ("The SQLite VFS", "unix"),
         "journal_mode": ("The journal mode, e.g., wal, delete, etc.", "delete"),
-        "locking_mode": ("The locking mode, either normal or exclusive", "normal")
+        "locking_mode": ("The locking mode, either normal or exclusive", "normal"),
+        "cache_size": ("The SQLite cache size in multiples of 1024 kb", 2000)
     }
     
     def __init__(self, ddl):
@@ -133,6 +134,7 @@ class SqliteDriver(AbstractDriver):
         self.vfs = str(config["vfs"])
         self.journal_mode = str(config["journal_mode"])
         self.locking_mode = str(config["locking_mode"])
+        self.cache_size = int(config["cache_size"])
 
         # if config["reset"] and os.path.exists(self.database):
         #     logging.debug("Deleting database '%s'" % self.database)
@@ -157,6 +159,8 @@ class SqliteDriver(AbstractDriver):
         self.conn = sqlite3.connect(self.database)
         self.cursor = self.conn.cursor()
 
+        if self.cache_size != 2000:
+            self.cursor.execute("PRAGMA cache_size=-%d" % self.cache_size)
 
         if self.locking_mode == "exclusive":
             self.cursor.execute("PRAGMA locking_mode=EXCLUSIVE")
