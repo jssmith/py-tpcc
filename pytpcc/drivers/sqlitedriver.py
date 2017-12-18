@@ -34,12 +34,12 @@ from __future__ import with_statement
 import os
 import sqlite3
 import logging
-import commands
+#import commands
 from pprint import pprint,pformat
 import sys
 
 import constants
-from abstractdriver import *
+from . import abstractdriver
 
 TXN_QUERIES = {
     "DELIVERY": {
@@ -102,7 +102,7 @@ TXN_QUERIES = {
 ## ==============================================
 ## SqliteDriver
 ## ==============================================
-class SqliteDriver(AbstractDriver):
+class SqliteDriver(abstractdriver.AbstractDriver):
     DEFAULT_CONFIG = {
         "database": ("The path to the SQLite database", "/tmp/tpcc.db" ),
         "vfs": ("The SQLite VFS", "unix"),
@@ -396,7 +396,7 @@ class SqliteDriver(AbstractDriver):
             assert len(all_customers) > 0
             namecnt = len(all_customers)
             index = (namecnt-1)/2
-            customer = all_customers[index]
+            customer = all_customers[int(index)]
             c_id = customer[0]
         assert len(customer) > 0
         assert c_id != None
@@ -437,7 +437,7 @@ class SqliteDriver(AbstractDriver):
             assert len(all_customers) > 0
             namecnt = len(all_customers)
             index = (namecnt-1)/2
-            customer = all_customers[index]
+            customer = all_customers[int(index)]
             c_id = customer[0]
         assert len(customer) > 0
         c_balance = customer[14] - h_amount
