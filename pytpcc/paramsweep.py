@@ -71,10 +71,10 @@ def save_results(filename, results):
 if __name__ == "__main__":
     databases = [
         { "path": "/ramdisk/tpcc", "vfs": "unix" },
-        { "path": "/tmp/tpcc.py", "vfs": "unix" },
-        { "path": "/efs/tpcc.py", "vfs": "unix" },
+        { "path": "/tmp/tpcc", "vfs": "unix" },
+        { "path": "/efs/tpcc", "vfs": "unix" },
         { "path": "/nfs/tpcc", "vfs": "unix"},
-        { "path": "192.168.1.57/tpcc-nfs", "vfs": "nfs4" } ]
+        { "path": "192.168.1.57/tpcc", "vfs": "nfs4" } ]
     locking_modes = [ "normal", "exclusive" ]
     journal_modes = [ "delete", "wal" ]
     cache_sizes = [ 2000, 20000 ]
