@@ -86,9 +86,15 @@ class Results:
             self.txn_times[txn_name] = orig_time + r.txn_times[txn_name]
             #logging.debug("%s [cnt=%d, time=%d]" % (txn_name, self.txn_counters[txn_name], self.txn_times[txn_name]))
         ## HACK
-        self.start = r.start
-        self.stop = r.stop
-            
+        if not self.start:
+            self.start = r.start
+        elif r.start:
+            self.start = min(self.start, r.start)
+        if not self.stop:
+            self.stop = r.stop
+        elif r.stop:
+            self.stop = max(self.stop, r.stop)
+
     def __str__(self):
         return self.show()
         
@@ -102,7 +108,6 @@ class Results:
         res = {}
         if load_time:
             res["LoadTime"] = load_time
-        res["Duration"] = duration
 
         total_time = 0
         total_cnt = 0
@@ -114,7 +119,7 @@ class Results:
             res["Txns"].append({ "Txn": txn, "Ct": txn_cnt, "Time": txn_time })
             total_time += txn_time
             total_cnt += txn_cnt
-        res["TxnsTotal"] = { "Ct": total_cnt, "Time": total_time }
+        res["TxnsTotal"] = { "Ct": total_cnt, "Time": total_time, "Duration": duration }
         return res
 
 
@@ -130,7 +135,8 @@ class Results:
         if "LoadTime" in data:
             ret += "Data Loading Time: %d seconds\n\n" % (data["LoadTime"])
 
-        ret += "Execution Results after %d seconds\n%s" % (data["Duration"], line)
+        duration = data["TxnsTotal"]["Duration"]
+        ret += "Execution Results after %d seconds\n%s" % (duration, line)
         ret += f % ("", "Executed", u"Time (µs)", "Rate")
 
         total_time = 0
@@ -143,8 +149,9 @@ class Results:
             ret += f % (txn, str(txn_cnt), str(int(txn_time * 1000000)), rate)
         total_cnt = data["TxnsTotal"]["Ct"]
         total_time = data["TxnsTotal"]["Time"]
-        total_rate = "%.02f txn/s" % ((total_cnt / total_time))
-        ret += f % ("TOTAL", str(total_cnt), str(int(total_time * 1000000)), total_rate)
+        total_rate = "%.02f txn/s" % ((total_cnt / duration))
+        concurrency = "%.02f" % (total_time / duration)
+        ret += f % ("TOTAL", str(total_cnt), str(int(duration * 1000000)), total_rate)
 
         return ret
 ## CLASS

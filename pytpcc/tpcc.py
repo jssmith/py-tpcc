@@ -131,9 +131,16 @@ def startExecution(driverClass, scaleParameters, args, config):
     pool = multiprocessing.Pool(args['clients'])
     debug = logging.getLogger().isEnabledFor(logging.DEBUG)
     
+    # remove non-serializable arguments
+    worker_args = args.copy()
+    if 'json_output' in worker_args:
+        del worker_args['json_output']
+    if 'config' in worker_args:
+        del worker_args['config']
+
     worker_results = [ ]
     for i in range(args['clients']):
-        r = pool.apply_async(executorFunc, (driverClass, scaleParameters, args, config, debug,))
+        r = pool.apply_async(executorFunc, (driverClass, scaleParameters, worker_args, config, debug,))
         worker_results.append(r)
     ## FOR
     pool.close()
