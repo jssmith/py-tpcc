@@ -27,13 +27,14 @@
 
 import sys
 import os
+import json
 import string
 import datetime
 import logging
 import re
 import argparse
 import glob
-import time 
+import time
 import multiprocessing
 from configparser import ConfigParser
 from pprint import pprint,pformat
@@ -199,6 +200,8 @@ if __name__ == '__main__':
                          help='Disable executing the workload')
     aparser.add_argument('--print-config', action='store_true',
                          help='Print out the default configuration file for the system and exit')
+    aparser.add_argument('--json-output', type=argparse.FileType('a'),
+                         help='append json-formatted performance numbers to file')
     aparser.add_argument('--debug', action='store_true',
                          help='Enable debug log messages')
     args = vars(aparser.parse_args())
@@ -263,6 +266,9 @@ if __name__ == '__main__':
         else:
             results = startExecution(driverClass, scaleParameters, args, config)
         assert results
+        if args['json_output']:
+            json.dump(results.data(load_time), args['json_output'])
+            args['json_output'].write("\n")
         print(results.show(load_time))
     ## IF
     

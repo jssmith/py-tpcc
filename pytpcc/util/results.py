@@ -140,11 +140,11 @@ class Results:
             txn_time = txn_data["Time"]
             txn_cnt = txn_data["Ct"]
             rate = u"%.02f txn/s" % ((txn_cnt / txn_time))
-            ret += f % (txn, str(txn_cnt), str(txn_time * 1000000), rate)
+            ret += f % (txn, str(txn_cnt), str(int(txn_time * 1000000)), rate)
         total_cnt = data["TxnsTotal"]["Ct"]
         total_time = data["TxnsTotal"]["Time"]
         total_rate = "%.02f txn/s" % ((total_cnt / total_time))
-        ret += f % ("TOTAL", str(total_cnt), str(total_time * 1000000), total_rate)
+        ret += f % ("TOTAL", str(total_cnt), str(int(total_time * 1000000)), total_rate)
 
         return ret
 ## CLASS
