@@ -29,8 +29,8 @@ Create a configuration file, e.g., `my-config`, possibly using `initialization-c
 Here is how to set up for a test running on the local `/tmp` file system.
 ```
 cp /tmp/tpcc-initial /tmp/tpcc
-rm -f /efs/tpcc-nfs-wal
-rm -f /efs/tpcc-nfs-journal
+rm -f /tmp/tpcc-nfs-wal
+rm -f /tmp/tpcc-nfs-journal
 sync
 sudo sh -c 'echo 1 > /proc/sys/vm/drop_caches'
 ```
