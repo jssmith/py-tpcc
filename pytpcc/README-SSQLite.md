@@ -93,7 +93,8 @@ following
     "journal_modes": [ "delete" ],
     "num_clients": [1, 2],
     "durations": [10],
-    "cache_sizes": [2000, 10000]
+    "cache_sizes": [2000, 10000],
+    "iterations": 1
 }
 ```
 

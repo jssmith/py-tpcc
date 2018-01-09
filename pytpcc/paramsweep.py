@@ -20,7 +20,7 @@ import os
 # Experiments will all begin by copying the same initial database to a test
 # location.
 
-def init_location(location, vfs):
+def init_location(location, vfs, alt_path):
 
     def cp(location):
         res = subprocess.call(["/bin/cp", "/tmp/tpcc-initial", location])
@@ -40,23 +40,30 @@ def init_location(location, vfs):
             print("problem in remove")
             sys.exit(1)
 
+    def su_rm_all(location):
+        su_rm(location)
+        su_rm("%s-wal" % location)
+        su_rm("%s-journal" % location)
+
     if vfs == "nfs4":
-        p = re.compile("^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/(.*)$")
-        m = p.match(location)
-        if not m:
-            print("failure to match on location", location)
-            sys.exit(1)
-        mount_location = "/efs/%s" % m.group(1)
-        print("translated", location, mount_location)
-        su_rm(mount_location)
-        su_rm("%s-wal" % mount_location)
-        su_rm("%s-journal" % mount_location)
+        if alt_path:
+            mount_location = alt_path
+        else:
+            p = re.compile("^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/(.*)$")
+            m = p.match(location)
+            if not m:
+                print("failure to match on location", location)
+                sys.exit(1)
+            mount_location = "/efs/%s" % m.group(1)
+            print("translated", location, mount_location)
+        su_rm_all(location)
         su_cp(mount_location)
         res = subprocess.call(["/usr/bin/sudo", "/bin/chown", "nfsnobody.nfsnobody", mount_location])
         if res:
             print("problem in chown")
             sys.exit(1)
     else:
+        su_rm_all(location)
         cp(location)
 
     if str.startswith(sys.platform, "linux"):
@@ -98,34 +105,36 @@ if __name__ == "__main__":
     results_f = args["results"]
 
     results = []
-    for database in sweep_config["databases"]:
-        for locking_mode in sweep_config["locking_modes"]:
-            for journal_mode in sweep_config["journal_modes"]:
-                for cache_size in sweep_config["cache_sizes"]:
-                    for clients in sweep_config["num_clients"]:
-                        for duration in sweep_config["durations"]:
-                            experiment_id = "%016x" % random.getrandbits(64)
-                            config = {
-                                "database": database["path"],
-                                "vfs": database["vfs"],
-                                "journal_mode": journal_mode,
-                                "locking_mode": locking_mode,
-                                "cache_size": cache_size }
-                            with open("tmp-config", "w") as f:
-                                f.write("# Auto-generated SQLite configuration file\n")
-                                f.write("[sqlite]\n\n")
-                                for k, v in config.items():
-                                    f.write("%s = %s\n" % (k, str(v)))
-                            # additional configuration information
-                            config["clients"] = clients
-                            config["duration"] = duration
-                            config["experiment_id"] = experiment_id
-                            print("executing ", config)
-                            init_location(database["path"], database["vfs"])
-                            result_file = "res-%s.json" % experiment_id
-                            res = run_test("tmp-config", clients, duration, result_file)
-                            with open(result_file) as f:
-                                result_data = json.load(f)
-                            json.dump({ "config" : config, "results": result_data }, results_f)
-                            results_f.write("\n")
-                            os.remove(result_file)
+    for iteration in range(sweep_config["iterations"]):
+        for database in sweep_config["databases"]:
+            for locking_mode in sweep_config["locking_modes"]:
+                for journal_mode in sweep_config["journal_modes"]:
+                    for cache_size in sweep_config["cache_sizes"]:
+                        for clients in sweep_config["num_clients"]:
+                            for duration in sweep_config["durations"]:
+                                experiment_id = "%016x" % random.getrandbits(64)
+                                config = {
+                                    "database": database["path"],
+                                    "vfs": database["vfs"],
+                                    "journal_mode": journal_mode,
+                                    "locking_mode": locking_mode,
+                                    "cache_size": cache_size }
+                                with open("tmp-config", "w") as f:
+                                    f.write("# Auto-generated SQLite configuration file\n")
+                                    f.write("[sqlite]\n\n")
+                                    for k, v in config.items():
+                                        f.write("%s = %s\n" % (k, str(v)))
+                                # additional configuration information
+                                config["clients"] = clients
+                                config["duration"] = duration
+                                config["experiment_id"] = experiment_id
+                                config["iteration"] = iteration
+                                print("executing ", config)
+                                init_location(database["path"], database["vfs"], database["alt_path"] if "alt_path" in database else None)
+                                result_file = "res-%s.json" % experiment_id
+                                res = run_test("tmp-config", clients, duration, result_file)
+                                with open(result_file) as f:
+                                    result_data = json.load(f)
+                                json.dump({ "config" : config, "results": result_data }, results_f)
+                                results_f.write("\n")
+                                os.remove(result_file)
