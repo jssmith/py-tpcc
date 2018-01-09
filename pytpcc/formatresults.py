@@ -12,6 +12,7 @@ def get_res(data):
     res_table = [
         config["locking_mode"],
         config["journal_mode"],
+        config["database"],
         config["vfs"],
         config["cache_size"],
         config["clients"],
