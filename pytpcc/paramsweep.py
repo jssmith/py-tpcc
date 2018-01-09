@@ -1,7 +1,10 @@
+import argparse
 import json
 import subprocess
 import sys
+import random
 import re
+import os
 
 # The paramsweep script runs the TPC-C benchmark using a variety of
 # configuration parameters.
@@ -47,59 +50,73 @@ def init_location(location, vfs):
     else:
         cp(location)
 
-    res = subprocess.call(["/bin/sync"])
-    if res:
-        print("problem in sync")
-        sys.exit(1)
-    res = subprocess.call(["/usr/bin/sudo", "/bin/bash", "-c", "echo 1 > /proc/sys/vm/drop_caches"])
-    if res:
-        print("problem in flush caches")
-        sys.exit(1)
+    if str.startswith(sys.platform, "linux"):
+        res = subprocess.call(["/bin/sync"])
+        if res:
+            print("problem in sync")
+            sys.exit(1)
+        res = subprocess.call(["/usr/bin/sudo", "/bin/bash", "-c", "echo 1 > /proc/sys/vm/drop_caches"])
+        if res:
+            print("problem in flush caches")
+            sys.exit(1)
+    else:
+        print("system is not Linux so skipping cache flush")
 
-def run_test(config_file):
-    env = { "LD_PRELOAD": "/home/ec2-user/sqlite-build/.libs/libsqlite3.so" }
-    args = ["python", "tpcc.py", "--config", config_file, "--no-load", "sqlite" ]
+def run_test(config_file, clients, duration=None, json_output=None):
+    env = os.environ
+    env["LD_PRELOAD"] = "/home/ec2-user/sqlite-build/.libs/libsqlite3.so"
+    args = ["python3", "tpcc.py",
+        "--config", config_file,
+        "--clients", str(clients)]
+    if duration:
+        args += ["--duration", str(duration)]
+    if json_output:
+        args += ["--json-output", json_output]
+    args += ["--no-load", "sqlite" ]
     p = subprocess.Popen(args, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     res = p.communicate()
     print(res)
     return res
 
-def save_results(filename, results):
-    with open(filename, "w") as outfile:
-        json.dump(results, outfile)
-
 if __name__ == "__main__":
-    databases = [
-        { "path": "/ramdisk/tpcc", "vfs": "unix" },
-        { "path": "/tmp/tpcc", "vfs": "unix" },
-        { "path": "/efs/tpcc", "vfs": "unix" },
-        { "path": "/nfs/tpcc", "vfs": "unix"},
-        { "path": "192.168.1.57/tpcc", "vfs": "nfs4" } ]
-    locking_modes = [ "normal", "exclusive" ]
-    journal_modes = [ "delete", "wal" ]
-    cache_sizes = [ 2000, 20000 ]
+    aparser = argparse.ArgumentParser(description='Parameter sweep for TPC-C')
+    aparser.add_argument('--config', type=argparse.FileType('r'), required=True,
+                         help='Path to the json configuration file')
+    aparser.add_argument('--results', type=argparse.FileType('a'), required=True,
+                         help='Path to the results output file')
+    args = vars(aparser.parse_args())
+    sweep_config = json.load(args["config"])
+    results_f = args["results"]
 
     results = []
-    for database in databases:
-        for locking_mode in locking_modes:
-            for journal_mode in journal_modes:
-                for cache_size in cache_sizes:
-                    config = {
-                        "database": database["path"],
-                        "vfs": database["vfs"],
-                        "journal_mode": journal_mode,
-                        "locking_mode": locking_mode,
-                        "cache_size": cache_size }
-                    with open("tmp-config", "w") as f:
-                        f.write("# Auto-generated SQLite configuration file\n")
-                        f.write("[sqlite]\n\n")
-                        for k, v in config.items():
-                            f.write("%s = %s\n" % (k, str(v)))
-                    print("executing ", config)
-                    init_location(database["path"], database["vfs"])
-                    res = run_test("tmp-config")
-                    results.append({ "config" : config, "results": [res[0][:10000],res[1][:10000]] })
-
-                    # save out the results on every iteration in case something breaks
-                    # xxx maybe better to append one json object per line
-                    save_results("results.txt", results)
+    for database in sweep_config["databases"]:
+        for locking_mode in sweep_config["locking_modes"]:
+            for journal_mode in sweep_config["journal_modes"]:
+                for cache_size in sweep_config["cache_sizes"]:
+                    for clients in sweep_config["num_clients"]:
+                        for duration in sweep_config["durations"]:
+                            experiment_id = "%016x" % random.getrandbits(64)
+                            config = {
+                                "database": database["path"],
+                                "vfs": database["vfs"],
+                                "journal_mode": journal_mode,
+                                "locking_mode": locking_mode,
+                                "cache_size": cache_size }
+                            with open("tmp-config", "w") as f:
+                                f.write("# Auto-generated SQLite configuration file\n")
+                                f.write("[sqlite]\n\n")
+                                for k, v in config.items():
+                                    f.write("%s = %s\n" % (k, str(v)))
+                            # additional configuration information
+                            config["clients"] = clients
+                            config["duration"] = duration
+                            config["experiment_id"] = experiment_id
+                            print("executing ", config)
+                            init_location(database["path"], database["vfs"])
+                            result_file = "res-%s.json" % experiment_id
+                            res = run_test("tmp-config", clients, duration, result_file)
+                            with open(result_file) as f:
+                                result_data = json.load(f)
+                            json.dump({ "config" : config, "results": result_data }, results_f)
+                            results_f.write("\n")
+                            os.remove(result_file)

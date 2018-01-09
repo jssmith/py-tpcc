@@ -81,11 +81,29 @@ LD_PRELOAD=/home/ec2-user/sqlite-build/.libs/libsqlite3.so python3 \
 Running a parameter sweep
 -------------------------
 
+Create a configuration file, e.g,. `my_sweep.json`, with content like the
+following
 ```
-python3 paramsweep.py
+{
+    "databases": [
+        { "path": "/tmp/tpcc", "vfs": "unix" },
+        { "path": "192.168.1.57/tpcc", "vfs": "nfs4" }
+    ],
+    "locking_modes": [ "normal" ],
+    "journal_modes": [ "delete" ],
+    "num_clients": [1, 2],
+    "durations": [10],
+    "cache_sizes": [2000, 10000]
+}
+```
+
+```
+python3 paramsweep.py \
+    --config my_sweep.json \
+    --results results.json
 ```
 
 Format output of the sweep
 ```
-python3 formatresults.py results.txt
+python3 formatresults.py results.json
 ```
