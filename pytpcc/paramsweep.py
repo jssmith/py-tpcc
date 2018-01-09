@@ -35,7 +35,7 @@ def init_location(location, vfs):
             sys.exit(1)
 
     def su_rm(location):
-        res = subprocess.call(["/usr/bin/sudo", "/bin/rm", location])
+        res = subprocess.call(["/usr/bin/sudo", "/bin/rm", "-f", location])
         if res:
             print("problem in remove")
             sys.exit(1)
@@ -49,8 +49,8 @@ def init_location(location, vfs):
         mount_location = "/efs/%s" % m.group(1)
         print("translated", location, mount_location)
         su_rm(mount_location)
-        su_rm(os.path.join(mount_location, "-wal"))
-        su_rm(os.path.join(mount_location, "-journal"))
+        su_rm("%s-wal" % mount_location)
+        su_rm("%s-journal" % mount_location)
         su_cp(mount_location)
         res = subprocess.call(["/usr/bin/sudo", "/bin/chown", "nfsnobody.nfsnobody", mount_location])
         if res:
