@@ -48,9 +48,10 @@ def init_location(location, vfs):
             sys.exit(1)
         mount_location = "/efs/%s" % m.group(1)
         print("translated", location, mount_location)
-        su_cp(mount_location)
+        su_rm(mount_location)
         su_rm(os.path.join(mount_location, "-wal"))
         su_rm(os.path.join(mount_location, "-journal"))
+        su_cp(mount_location)
         res = subprocess.call(["/usr/bin/sudo", "/bin/chown", "nfsnobody.nfsnobody", mount_location])
         if res:
             print("problem in chown")
