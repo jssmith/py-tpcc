@@ -132,9 +132,9 @@ class SqliteDriver(abstractdriver.AbstractDriver):
             assert key in config, "Missing parameter '%s' in %s configuration" % (key, self.name)
 
         self.database = str(config["database"])
-        self.vfs = str(config["vfs"])
-        self.journal_mode = str(config["journal_mode"])
-        self.locking_mode = str(config["locking_mode"])
+        self.vfs = str(config["vfs"]).lower()
+        self.journal_mode = str(config["journal_mode"]).lower()
+        self.locking_mode = str(config["locking_mode"]).lower()
         self.cache_size = int(config["cache_size"])
 
         # if config["reset"] and os.path.exists(self.database):
@@ -155,18 +155,29 @@ class SqliteDriver(abstractdriver.AbstractDriver):
         self.conn = sqlite3.connect(self.database)
         self.cursor = self.conn.cursor()
 
-        if self.cache_size != 2000:
-            self.cursor.execute("PRAGMA cache_size=-%d" % self.cache_size)
+        try:
+            self.cursor.execute("PRAGMA cache_size")
+            current_cache_size = int(self.cursor.fetchone()[0])
+            if self.cache_size != current_cache_size:
+                self.cursor.execute("PRAGMA cache_size=-%d" % self.cache_size)
+        except sqlite3.OperationalError as err:
+            print(err)
 
-        if self.locking_mode == "exclusive":
-            self.cursor.execute("PRAGMA locking_mode=EXCLUSIVE")
-        elif self.locking_mode:
-            assert self.locking_mode == "normal", "unsupported locking mode"
+        try:
+            self.cursor.execute("PRAGMA locking_mode")
+            current_locking_mode = self.cursor.fetchone()[0]
+            if self.locking_mode != current_locking_mode:
+                self.cursor.execute("PRAGMA locking_mode=%s" % self.locking_mode)
+        except sqlite3.OperationalError as err:
+            print(err)
 
-        if self.journal_mode == 'wal':
-            self.cursor.execute("PRAGMA journal_mode=WAL")
-        else:
-            assert self.journal_mode == "delete", "unsuported journal mode"
+        try:
+            self.cursor.execute("PRAGMA journal_mode")
+            current_journal_mode = self.cursor.fetchone()[0]
+            if self.journal_mode != current_journal_mode:
+                self.cursor.execute("PRAGMA journal_mode=%s" % self.journal_mode)
+        except sqlite3.OperationalError as err:
+            print(err)
 
         if config["reset"]:
             with open(self.ddl) as ddl:

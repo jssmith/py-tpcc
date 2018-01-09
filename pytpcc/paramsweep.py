@@ -34,6 +34,12 @@ def init_location(location, vfs):
             print("problem in copy")
             sys.exit(1)
 
+    def su_rm(location):
+        res = subprocess.call(["/usr/bin/sudo", "/bin/rm", location])
+        if res:
+            print("problem in remove")
+            sys.exit(1)
+
     if vfs == "nfs4":
         p = re.compile("^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/(.*)$")
         m = p.match(location)
@@ -43,6 +49,8 @@ def init_location(location, vfs):
         mount_location = "/efs/%s" % m.group(1)
         print("translated", location, mount_location)
         su_cp(mount_location)
+        su_rm(os.path.join(mount_location, "-wal"))
+        su_rm(os.path.join(mount_location, "-journal"))
         res = subprocess.call(["/usr/bin/sudo", "/bin/chown", "nfsnobody.nfsnobody", mount_location])
         if res:
             print("problem in chown")
