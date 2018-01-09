@@ -56,7 +56,7 @@ def init_location(location, vfs, alt_path):
                 sys.exit(1)
             mount_location = "/efs/%s" % m.group(1)
             print("translated", location, mount_location)
-        su_rm_all(location)
+        su_rm_all(mount_location)
         su_cp(mount_location)
         res = subprocess.call(["/usr/bin/sudo", "/bin/chown", "nfsnobody.nfsnobody", mount_location])
         if res:
