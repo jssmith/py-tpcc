@@ -137,4 +137,5 @@ if __name__ == "__main__":
                                     result_data = json.load(f)
                                 json.dump({ "config" : config, "results": result_data }, results_f)
                                 results_f.write("\n")
+                                results_f.flush()
                                 os.remove(result_file)
