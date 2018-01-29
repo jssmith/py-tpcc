@@ -89,7 +89,7 @@ def run_test(config_file, clients, duration=None, read_weight=None, json_output=
     if read_weight:
         if read_weight == "normal":
             pass
-        if read_weight == "read_mostly":
+        elif read_weight == "read_mostly":
             args += ["--read-mostly"]
         elif read_weight == "read_only":
             args += ["--read-only"]
