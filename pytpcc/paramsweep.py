@@ -80,7 +80,9 @@ def init_location(location, vfs, alt_path):
 
 def run_test(config_file, clients, duration=None, read_weight=None, json_output=None):
     env = os.environ
-    env["LD_PRELOAD"] = "/home/ec2-user/sqlite-build/.libs/libsqlite3.so"
+    if LD_PRELOAD not in env:
+        print("must define LD_PRELOAD with path to libsqlite3.so")
+        sys.exit(1)
     args = ["python3", "tpcc.py",
         "--config", config_file,
         "--clients", str(clients)]
