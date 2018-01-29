@@ -80,7 +80,7 @@ def init_location(location, vfs, alt_path):
 
 def run_test(config_file, clients, duration=None, read_weight=None, json_output=None):
     env = os.environ
-    if LD_PRELOAD not in env:
+    if "LD_PRELOAD" not in env:
         print("must define LD_PRELOAD with path to libsqlite3.so")
         sys.exit(1)
     args = ["python3", "tpcc.py",
@@ -89,7 +89,7 @@ def run_test(config_file, clients, duration=None, read_weight=None, json_output=
     if duration:
         args += ["--duration", str(duration)]
     if read_weight:
-        args += ["--frac-read", "%.3f" % read_weight]
+        args += ["--frac-read=%.3f" % read_weight]
     if json_output:
         args += ["--json-output", json_output]
     args += ["--no-load", "sqlite" ]

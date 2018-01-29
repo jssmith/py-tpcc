@@ -88,7 +88,17 @@ class Executor:
             
             if debug: logging.debug("Executing '%s' transaction" % txn)
             try:
-                val = self.driver.executeTransaction(txn, params)
+                try_query = True
+                retry_ct = 0
+                while try_query and (time.time() - start) <= duration:
+                    try:
+                        val = self.driver.executeTransaction(txn, params)
+                        try_query = False
+                    except sqlite3.OperationalError:
+                        retry_ct++
+                        if retry_ct >= 20:
+                            r.abortTransaction(txn_id)
+                            try_query = False
             except KeyboardInterrupt:
                 return -1
             except (Exception, AssertionError) as ex:
