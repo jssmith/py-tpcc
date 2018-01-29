@@ -17,6 +17,7 @@ def get_res(data, which):
         "status": dts["ORDER_STATUS"] if "ORDER_STATUS" in dts else None
         }
     res_table = [
+        config["read_weight"],
         config["locking_mode"],
         config["journal_mode"],
         config["database"],
