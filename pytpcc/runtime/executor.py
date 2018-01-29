@@ -44,10 +44,35 @@ from util import *
 
 class Executor:
     
-    def __init__(self, driver, scaleParameters, stop_on_error = False):
+    def __init__(self, driver, scaleParameters, stop_on_error = False, weights=None):
         self.driver = driver
         self.scaleParameters = scaleParameters
         self.stop_on_error = stop_on_error
+
+        if not weights:
+            self.weights = {
+                constants.TransactionTypes.STOCK_LEVEL: 4,
+                constants.TransactionTypes.DELIVERY: 4,
+                constants.TransactionTypes.ORDER_STATUS: 4,
+                constants.TransactionTypes.PAYMENT 43
+                constants.TransactionTypes.NEW_ORDER: 55
+            }
+        else:
+            self.weights = weights
+        sumw = 0
+        self.txn_select = []
+        for txn, w in self.weights:
+            sumw += w
+            self.txn_select.append([sumw, txn])
+        self.sumw = sumw
+        self.txn_params = {
+            constants.TransactionTypes.STOCK_LEVEL, self.generateStockLevelParams(),
+            constants.TransactionTypes.DELIVERY, self.generateDeliveryParams(),
+            constants.TransactionTypes.ORDER_STATUS, self.generateOrderStatusParams(),
+            constants.TransactionTypes.PAYMENT, self.generatePaymentParams(),
+            constants.TransactionTypes.NEW_ORDER, self.generateNewOrderParams()
+        }
+
     ## DEF
     
     def execute(self, duration):
@@ -88,20 +113,9 @@ class Executor:
         ## This is not strictly accurate: The requirement is for certain
         ## *minimum* percentages to be maintained. This is close to the right
         ## thing, but not precisely correct. See TPC-C 5.2.4 (page 68).
-        x = rand.number(1, 100)
-        params = None
-        txn = None
-        if x <= 4: ## 4%
-            txn, params = (constants.TransactionTypes.STOCK_LEVEL, self.generateStockLevelParams())
-        elif x <= 4 + 4: ## 4%
-            txn, params = (constants.TransactionTypes.DELIVERY, self.generateDeliveryParams())
-        elif x <= 4 + 4 + 4: ## 4%
-            txn, params = (constants.TransactionTypes.ORDER_STATUS, self.generateOrderStatusParams())
-        elif x <= 43 + 4 + 4 + 4: ## 43%
-            txn, params = (constants.TransactionTypes.PAYMENT, self.generatePaymentParams())
-        else: ## 45%
-            assert x > 100 - 45
-            txn, params = (constants.TransactionTypes.NEW_ORDER, self.generateNewOrderParams())
+        x = rand.number(1, self.sumw)
+        txn = next(t[1] for t in self.txn_select if x < t[0])
+        params = self.txn_params[txn]
         
         return (txn, params)
     ## DEF
