@@ -140,6 +140,7 @@ if __name__ == "__main__":
                                     config["duration"] = duration
                                     config["experiment_id"] = experiment_id
                                     config["iteration"] = iteration
+                                    config["read_weight"] = read_weight
                                     print("executing ", config)
                                     init_location(database["path"], database["vfs"], database["alt_path"] if "alt_path" in database else None)
                                     result_file = "res-%s.json" % experiment_id
