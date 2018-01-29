@@ -78,7 +78,7 @@ def init_location(location, vfs, alt_path):
     else:
         print("system is not Linux so skipping cache flush")
 
-def run_test(config_file, clients, duration=None, json_output=None):
+def run_test(config_file, clients, duration=None, read_weight=None, json_output=None):
     env = os.environ
     env["LD_PRELOAD"] = "/home/ec2-user/sqlite-build/.libs/libsqlite3.so"
     args = ["python3", "tpcc.py",
@@ -86,6 +86,16 @@ def run_test(config_file, clients, duration=None, json_output=None):
         "--clients", str(clients)]
     if duration:
         args += ["--duration", str(duration)]
+    if read_weight:
+        if read_weight == "normal":
+            pass
+        if read_weight == "read_mostly":
+            args += ["--read-mostly"]
+        elif read_weight == "read_only":
+            args += ["--read-only"]
+        else:
+            print("unrecognized read weight %s" % read_weight)
+            sys.exit(1)
     if json_output:
         args += ["--json-output", json_output]
     args += ["--no-load", "sqlite" ]
@@ -112,30 +122,31 @@ if __name__ == "__main__":
                     for cache_size in sweep_config["cache_sizes"]:
                         for clients in sweep_config["num_clients"]:
                             for duration in sweep_config["durations"]:
-                                experiment_id = "%016x" % random.getrandbits(64)
-                                config = {
-                                    "database": database["path"],
-                                    "vfs": database["vfs"],
-                                    "journal_mode": journal_mode,
-                                    "locking_mode": locking_mode,
-                                    "cache_size": cache_size }
-                                with open("tmp-config", "w") as f:
-                                    f.write("# Auto-generated SQLite configuration file\n")
-                                    f.write("[sqlite]\n\n")
-                                    for k, v in config.items():
-                                        f.write("%s = %s\n" % (k, str(v)))
-                                # additional configuration information
-                                config["clients"] = clients
-                                config["duration"] = duration
-                                config["experiment_id"] = experiment_id
-                                config["iteration"] = iteration
-                                print("executing ", config)
-                                init_location(database["path"], database["vfs"], database["alt_path"] if "alt_path" in database else None)
-                                result_file = "res-%s.json" % experiment_id
-                                res = run_test("tmp-config", clients, duration, result_file)
-                                with open(result_file) as f:
-                                    result_data = json.load(f)
-                                json.dump({ "config" : config, "results": result_data }, results_f)
-                                results_f.write("\n")
-                                results_f.flush()
-                                os.remove(result_file)
+                                for read_weight in sweep_config["read_weights"]:
+                                    experiment_id = "%016x" % random.getrandbits(64)
+                                    config = {
+                                        "database": database["path"],
+                                        "vfs": database["vfs"],
+                                        "journal_mode": journal_mode,
+                                        "locking_mode": locking_mode,
+                                        "cache_size": cache_size }
+                                    with open("tmp-config", "w") as f:
+                                        f.write("# Auto-generated SQLite configuration file\n")
+                                        f.write("[sqlite]\n\n")
+                                        for k, v in config.items():
+                                            f.write("%s = %s\n" % (k, str(v)))
+                                    # additional configuration information
+                                    config["clients"] = clients
+                                    config["duration"] = duration
+                                    config["experiment_id"] = experiment_id
+                                    config["iteration"] = iteration
+                                    print("executing ", config)
+                                    init_location(database["path"], database["vfs"], database["alt_path"] if "alt_path" in database else None)
+                                    result_file = "res-%s.json" % experiment_id
+                                    res = run_test("tmp-config", clients, duration, read_weight, result_file)
+                                    with open(result_file) as f:
+                                        result_data = json.load(f)
+                                    json.dump({ "config" : config, "results": result_data }, results_f)
+                                    results_f.write("\n")
+                                    results_f.flush()
+                                    os.remove(result_file)
