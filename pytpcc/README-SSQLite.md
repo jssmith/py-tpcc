@@ -15,7 +15,7 @@ For faster testing run the database load once and make a copy of it for each tes
 
 ```
 LD_PRELOAD=/home/ec2-user/sqlite-build/.libs/libsqlite3.so python3 \
-    tpcc.py --config initialization-config --no-execute sqlite
+    tpcc.py --config initialization-config --reset --no-execute sqlite
 ```
 
 Running a single benchmark
