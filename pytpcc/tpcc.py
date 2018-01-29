@@ -39,6 +39,8 @@ import multiprocessing
 from configparser import ConfigParser
 from pprint import pprint,pformat
 
+import constants
+
 from util import *
 from runtime import *
 import drivers
@@ -246,7 +248,8 @@ if __name__ == '__main__':
     if config['reset']: logging.info("Reseting database")
     config['txn_weights'] = None
     if args['read_only'] and args['read_mostly']:
-        raise
+        print("May not combine --read-only and --read-mostly")
+        sys.exit(1)
     if args['read_only']:
         config['txn_weights'] = {
             constants.TransactionTypes.STOCK_LEVEL: 50,
