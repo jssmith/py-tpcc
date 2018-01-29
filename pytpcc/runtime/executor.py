@@ -55,7 +55,7 @@ class Executor:
                 constants.TransactionTypes.DELIVERY: 4,
                 constants.TransactionTypes.ORDER_STATUS: 4,
                 constants.TransactionTypes.PAYMENT: 43,
-                constants.TransactionTypes.NEW_ORDER: 55
+                constants.TransactionTypes.NEW_ORDER: 45
             }
         else:
             self.weights = weights

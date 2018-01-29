@@ -87,15 +87,7 @@ def run_test(config_file, clients, duration=None, read_weight=None, json_output=
     if duration:
         args += ["--duration", str(duration)]
     if read_weight:
-        if read_weight == "normal":
-            pass
-        elif read_weight == "read_mostly":
-            args += ["--read-mostly"]
-        elif read_weight == "read_only":
-            args += ["--read-only"]
-        else:
-            print("unrecognized read weight %s" % read_weight)
-            sys.exit(1)
+        args += ["--frac-read", "%.3f" % read_weight]
     if json_output:
         args += ["--json-output", json_output]
     args += ["--no-load", "sqlite" ]
