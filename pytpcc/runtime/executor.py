@@ -54,23 +54,23 @@ class Executor:
                 constants.TransactionTypes.STOCK_LEVEL: 4,
                 constants.TransactionTypes.DELIVERY: 4,
                 constants.TransactionTypes.ORDER_STATUS: 4,
-                constants.TransactionTypes.PAYMENT 43
+                constants.TransactionTypes.PAYMENT: 43,
                 constants.TransactionTypes.NEW_ORDER: 55
             }
         else:
             self.weights = weights
         sumw = 0
         self.txn_select = []
-        for txn, w in self.weights:
+        for txn, w in self.weights.items():
             sumw += w
             self.txn_select.append([sumw, txn])
         self.sumw = sumw
         self.txn_params = {
-            constants.TransactionTypes.STOCK_LEVEL, self.generateStockLevelParams(),
-            constants.TransactionTypes.DELIVERY, self.generateDeliveryParams(),
-            constants.TransactionTypes.ORDER_STATUS, self.generateOrderStatusParams(),
-            constants.TransactionTypes.PAYMENT, self.generatePaymentParams(),
-            constants.TransactionTypes.NEW_ORDER, self.generateNewOrderParams()
+            constants.TransactionTypes.STOCK_LEVEL: self.generateStockLevelParams,
+            constants.TransactionTypes.DELIVERY: self.generateDeliveryParams,
+            constants.TransactionTypes.ORDER_STATUS: self.generateOrderStatusParams,
+            constants.TransactionTypes.PAYMENT: self.generatePaymentParams,
+            constants.TransactionTypes.NEW_ORDER: self.generateNewOrderParams
         }
 
     ## DEF
@@ -113,9 +113,9 @@ class Executor:
         ## This is not strictly accurate: The requirement is for certain
         ## *minimum* percentages to be maintained. This is close to the right
         ## thing, but not precisely correct. See TPC-C 5.2.4 (page 68).
-        x = rand.number(1, self.sumw)
+        x = rand.number(0, self.sumw - 1)
         txn = next(t[1] for t in self.txn_select if x < t[0])
-        params = self.txn_params[txn]
+        params = self.txn_params[txn]()
         
         return (txn, params)
     ## DEF

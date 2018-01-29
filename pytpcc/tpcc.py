@@ -170,7 +170,7 @@ def executorFunc(driverClass, scaleParameters, args, config, debug):
     config['reset'] = False
     driver.loadConfig(config)
 
-    e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'])
+    e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'])
     driver.executeStart()
     results = e.execute(args['duration'])
     driver.executeFinish()
@@ -195,6 +195,10 @@ if __name__ == '__main__':
                          help='Number of Warehouses')
     aparser.add_argument('--duration', default=60, type=int, metavar='D',
                          help='How long to run the benchmark in seconds')
+    aparser.add_argument('--read-mostly', action='store_true',
+                         help='85%% read workload')
+    aparser.add_argument('--read-only', action='store_true',
+                         help='read-only workload')
     aparser.add_argument('--ddl', default=os.path.realpath(os.path.join(os.path.dirname(__file__), "tpcc.sql")),
                          help='Path to the TPC-C DDL SQL file')
     aparser.add_argument('--clients', default=1, type=int, metavar='N',
@@ -236,10 +240,30 @@ if __name__ == '__main__':
         logging.debug("Using default configuration for %s" % args['system'])
         defaultConfig = driver.makeDefaultConfig()
         config = dict(map(lambda x: (x, defaultConfig[x][1]), defaultConfig.keys()))
-    config['reset'] = args['reset']
     config['load'] = False
     config['execute'] = False
+    config['reset'] = args['reset']
     if config['reset']: logging.info("Reseting database")
+    config['txn_weights'] = None
+    if args['read_only'] and args['read_mostly']:
+        raise
+    if args['read_only']:
+        config['txn_weights'] = {
+            constants.TransactionTypes.STOCK_LEVEL: 50,
+            constants.TransactionTypes.DELIVERY: 0,
+            constants.TransactionTypes.ORDER_STATUS: 50,
+            constants.TransactionTypes.PAYMENT: 0,
+            constants.TransactionTypes.NEW_ORDER: 0
+        }
+    elif args['read_mostly']:
+        config['txn_weights'] = {
+            constants.TransactionTypes.STOCK_LEVEL: 42,
+            constants.TransactionTypes.DELIVERY: 1,
+            constants.TransactionTypes.ORDER_STATUS: 43,
+            constants.TransactionTypes.PAYMENT: 7,
+            constants.TransactionTypes.NEW_ORDER: 7
+        }
+
     driver.loadConfig(config)
     logging.info("Initializing TPC-C benchmark using %s" % driver)
 
@@ -266,7 +290,7 @@ if __name__ == '__main__':
     ## WORKLOAD DRIVER!!!
     if not args['no_execute']:
         if args['clients'] == 1:
-            e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'])
+            e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'])
             driver.executeStart()
             results = e.execute(args['duration'])
             driver.executeFinish()
