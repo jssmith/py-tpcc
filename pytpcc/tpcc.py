@@ -174,7 +174,7 @@ def executorFunc(driverClass, scaleParameters, args, config, debug):
 
     e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'])
     driver.executeStart()
-    results = e.execute(args['duration'])
+    results = e.execute(args['duration'], args['timing_details'])
     driver.executeFinish()
     
     return results
@@ -213,6 +213,8 @@ if __name__ == '__main__':
                          help='Print out the default configuration file for the system and exit')
     aparser.add_argument('--json-output', type=argparse.FileType('a'),
                          help='append json-formatted performance numbers to file')
+    aparser.add_argument('--timing-details', action='store_true',
+                         help='Capture timing details on each query')
     aparser.add_argument('--debug', action='store_true',
                          help='Enable debug log messages')
     args = vars(aparser.parse_args())
@@ -286,7 +288,7 @@ if __name__ == '__main__':
         if args['clients'] == 1:
             e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'])
             driver.executeStart()
-            results = e.execute(args['duration'])
+            results = e.execute(args['duration'], args['timing_details'])
             driver.executeFinish()
         else:
             results = startExecution(driverClass, scaleParameters, args, config)

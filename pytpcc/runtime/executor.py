@@ -75,8 +75,8 @@ class Executor:
 
     ## DEF
     
-    def execute(self, duration):
-        r = results.Results()
+    def execute(self, duration, record_detail):
+        r = results.Results(record_detail)
         assert r
         logging.info("Executing benchmark for %d seconds" % duration)
         start = r.startBenchmark()

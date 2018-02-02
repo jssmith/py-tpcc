@@ -29,7 +29,11 @@ import time
 
 class Results:
     
-    def __init__(self):
+    def __init__(self, log_timing_details=False):
+        self.log_timing_details = log_timing_details
+        if self.log_timing_details:
+            self.timing_details = []
+
         self.start = None
         self.stop = None
         self.txn_id = 0
@@ -37,6 +41,7 @@ class Results:
         self.txn_counters = { }
         self.txn_times = { }
         self.running = { }
+
         
     def startBenchmark(self):
         """Mark the benchmark as having been started"""
@@ -63,6 +68,15 @@ class Results:
         assert id in self.running
         txn_name, txn_start = self.running[id]
         del self.running[id]
+
+        if self.log_timing_details:
+            txn_end = time.time()
+            self.timing_details.append({
+                "txn_name": txn_name,
+                "start_time": txn_start,
+                "end_time": txn_end,
+                "success": False
+            })
         
     def stopTransaction(self, id):
         """Record that the benchmark completed an invocation of the given transaction"""
@@ -70,13 +84,22 @@ class Results:
         txn_name, txn_start = self.running[id]
         del self.running[id]
         
-        duration = time.time() - txn_start
+        txn_end = time.time()
+        duration = txn_end - txn_start
         total_time = self.txn_times.get(txn_name, 0)
         self.txn_times[txn_name] = total_time + duration
         
         total_cnt = self.txn_counters.get(txn_name, 0)
         self.txn_counters[txn_name] = total_cnt + 1
-        
+
+        if self.log_timing_details:
+            self.timing_details.append({
+                "txn_name": txn_name,
+                "start_time": txn_start,
+                "end_time": txn_end,
+                "success": True
+            })
+
     def append(self, r):
         for txn_name in r.txn_counters.keys():
             orig_cnt = self.txn_counters.get(txn_name, 0)
@@ -120,6 +143,8 @@ class Results:
             total_time += txn_time
             total_cnt += txn_cnt
         res["TxnsTotal"] = { "Ct": total_cnt, "Time": total_time, "Duration": duration }
+        if self.log_timing_details:
+            res["TxnsDetail"] = self.timing_details
         return res
 
 
