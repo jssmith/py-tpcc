@@ -94,11 +94,16 @@ class Executor:
                     try:
                         val = self.driver.executeTransaction(txn, params)
                         try_query = False
-                    except sqlite3.OperationalError:
-                        retry_ct++
+                    except Exception as ex:
+                        retry_ct += 1
+                        print("retry transaction ct %d" % retry_ct)
                         if retry_ct >= 20:
+                            print("abort transaction")
                             r.abortTransaction(txn_id)
                             try_query = False
+                            raise ex
+                        if retry_ct > 3:
+                            time.sleep(0.01 * retry_ct)
             except KeyboardInterrupt:
                 return -1
             except (Exception, AssertionError) as ex:
