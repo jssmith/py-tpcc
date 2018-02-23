@@ -104,6 +104,9 @@ class Executor:
                             raise ex
                         if retry_ct > 3:
                             time.sleep(0.01 * retry_ct)
+                if try_query:
+                    r.abortTransaction(txn_id)
+                    continue
             except KeyboardInterrupt:
                 return -1
             except (Exception, AssertionError) as ex:
