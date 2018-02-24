@@ -99,6 +99,7 @@ TXN_QUERIES = {
 }
 
 is_nfs4_ext_loaded = False
+is_vfsstat_ext_loaded = False
 
 ## ==============================================
 ## SqliteDriver
@@ -124,6 +125,10 @@ class SqliteDriver(abstractdriver.AbstractDriver):
     def makeDefaultConfig(self):
         return SqliteDriver.DEFAULT_CONFIG
     
+    def getStats(self):
+        self.cursor.execute("SELECT * FROM vfsstat")
+        print(self.cursor.fetchall())
+
     ## ----------------------------------------------
     ## loadConfig
     ## ----------------------------------------------
@@ -140,6 +145,14 @@ class SqliteDriver(abstractdriver.AbstractDriver):
         # if config["reset"] and os.path.exists(self.database):
         #     logging.debug("Deleting database '%s'" % self.database)
         #     os.unlink(self.database)
+
+        global is_vfsstat_ext_loaded
+        if not is_vfsstat_ext_loaded:
+            init_conn = sqlite3.connect(":memory:")
+            init_conn.enable_load_extension(True)
+            init_conn.load_extension("./vfsstat.so")
+            init_conn.close()
+            is_vfsstat_ext_loaded = True
 
         if self.vfs == 'nfs4':
             global is_nfs4_ext_loaded
