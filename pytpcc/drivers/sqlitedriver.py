@@ -34,6 +34,7 @@ from __future__ import with_statement
 import os
 import sqlite3
 import logging
+import json
 #import commands
 from pprint import pprint,pformat
 import sys
@@ -130,7 +131,9 @@ class SqliteDriver(abstractdriver.AbstractDriver):
 
     def finishStats(self, txn):
         self.cursor.execute("SELECT * FROM vfsstat")
-        print(txn, self.cursor.fetchall())
+        stat_res = dict([("%s:%s" % (g, sg), ct) for (g,sg,ct) in self.cursor.fetchall()])
+        stat_res["txn"] = txn
+        print(json.dumps(stat_res))
 
     ## ----------------------------------------------
     ## loadConfig
