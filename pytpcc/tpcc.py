@@ -286,7 +286,6 @@ if __name__ == '__main__':
     ## WORKLOAD DRIVER!!!
     if not args['no_execute']:
         print("start of execution")
-        driver.getStats()
         if args['clients'] == 1:
             e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'])
             driver.executeStart()
@@ -298,7 +297,6 @@ if __name__ == '__main__':
         if args['json_output']:
             json.dump(results.data(load_time), args['json_output'])
             args['json_output'].write("\n")
-        driver.getStats()
         print("end of execution")
         print(results.show(load_time))
     ## IF

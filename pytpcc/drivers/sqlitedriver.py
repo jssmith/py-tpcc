@@ -125,9 +125,12 @@ class SqliteDriver(abstractdriver.AbstractDriver):
     def makeDefaultConfig(self):
         return SqliteDriver.DEFAULT_CONFIG
     
-    def getStats(self):
+    def startStats(self):
+        self.cursor.execute("UPDATE vfsstat SET count=0")
+
+    def finishStats(self, txn):
         self.cursor.execute("SELECT * FROM vfsstat")
-        print(self.cursor.fetchall())
+        print(txn, self.cursor.fetchall())
 
     ## ----------------------------------------------
     ## loadConfig

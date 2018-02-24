@@ -84,6 +84,7 @@ class Executor:
 
         while (time.time() - start) <= duration:
             txn, params = self.doOne()
+            self.driver.startStats()
             txn_id = r.startTransaction(txn)
             
             if debug: logging.debug("Executing '%s' transaction" % txn)
@@ -117,7 +118,7 @@ class Executor:
                 continue
 
             #if debug: logging.debug("%s\nParameters:\n%s\nResult:\n%s" % (txn, pformat(params), pformat(val)))
-            
+            self.driver.finishStats(txn)
             r.stopTransaction(txn_id)
         ## WHILE
             
