@@ -162,7 +162,7 @@ class Results:
 
         duration = data["TxnsTotal"]["Duration"]
         ret += "Execution Results after %d seconds\n%s" % (duration, line)
-        ret += f % ("", "Executed", u"Time (µs)", "Rate")
+        ret += f % ("", "Executed", u"Time (us)", "Rate")
 
         total_time = 0
         total_cnt = 0
