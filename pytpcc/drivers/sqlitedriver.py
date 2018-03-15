@@ -99,6 +99,7 @@ TXN_QUERIES = {
 }
 
 is_nfs4_ext_loaded = False
+is_tcbl_loaded = False
 
 ## ==============================================
 ## SqliteDriver
@@ -149,6 +150,14 @@ class SqliteDriver(abstractdriver.AbstractDriver):
                 init_conn.load_extension("./nfs4.so")
                 init_conn.close()
                 is_nfs4_ext_loaded = True
+        if self.vfs == 'tcbl':
+            global is_tcbl_loaded
+            if not is_tcbl_loaded:
+                init_conn = sqlite3.connect(":memory:")
+                init_conn.enable_load_extension(True)
+                init_conn.load_extension("./libsqlite3tcbl.so")
+                init_conn.close()
+                is_tcbl_loaded = True
         else:
             assert self.vfs == "unix", "unsupported vfs"
 
@@ -182,8 +191,12 @@ class SqliteDriver(abstractdriver.AbstractDriver):
         if config["reset"]:
             with open(self.ddl) as ddl:
                 ddl_statements = "".join([l for l in ddl if not l.startswith("--")]).split(";")
+            stmt_ct = 0
             for statement in ddl_statements:
                 self.cursor.execute(statement);
+                stmt_ct += 1
+                if stmt_ct % 10000 == 0:
+                    logging.debug("loading progress %d" % stmt_ct)
 
     ## ----------------------------------------------
     ## loadTuples
