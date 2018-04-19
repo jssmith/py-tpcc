@@ -144,7 +144,7 @@ class PostgresDriver(abstractdriver.AbstractDriver):
         if config["reset"]:
             with open(self.ddl) as ddl:
                 ddl_statements = " ".join([l for l in ddl if not l.startswith("--")]).split(";")
-            for statement in [s.strip() for s in ddl_statements]:
+            for statement in [s.strip().replace("TINYINT", "SMALLINT") for s in ddl_statements]:
                 if statement:
                     self.cursor.execute(statement);
 
