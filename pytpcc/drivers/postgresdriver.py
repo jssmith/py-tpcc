@@ -105,8 +105,11 @@ is_nfs4_ext_loaded = False
 ## ==============================================
 class PostgresDriver(abstractdriver.AbstractDriver):
     DEFAULT_CONFIG = {
-        # "host":         ("The hostname to postgres", "localhost" ),
-        # "port":         ("The port number to postgres", "5432"),
+        "host":         ("The hostname to postgres", "localhost" ),
+        "port":         ("The port number to postgres", "5432"),
+        "user":         ("The user to connect as", "tpcc"),
+        "password":     ("The password to use", ""),
+        "database":     ("The name of the database", "tpcc")
     }
     
     def __init__(self, ddl):
@@ -128,16 +131,15 @@ class PostgresDriver(abstractdriver.AbstractDriver):
         for key in PostgresDriver.DEFAULT_CONFIG.keys():
             assert key in config, "Missing parameter '%s' in %s configuration" % (key, self.name)
 
-        # self.database = str(config["database"])
-        # self.vfs = str(config["vfs"]).lower()
-        # self.journal_mode = str(config["journal_mode"]).lower()
-        # self.locking_mode = str(config["locking_mode"]).lower()
-        # self.cache_size = int(config["cache_size"])
-
         connect_args = {
-            "dbname": "tpcc",
-            "user": "postgres"
+            "dbname": str(config["database"]),
+            "user": str(config["user"]),
+            "password": str(config["password"])
         }
+        if "host" in config and config["host"]:
+            connect_args["host"] = str(config["host"])
+            if "port" in config and config["port"]:
+                connect_args["port"] = int(config["port"])
         self.conn = psycopg2.connect(**connect_args)
         self.cursor = self.conn.cursor()
 
