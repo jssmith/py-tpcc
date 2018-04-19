@@ -96,14 +96,16 @@ class Executor:
                         try_query = False
                     except Exception as ex:
                         retry_ct += 1
-                        print("retry transaction ct %d" % retry_ct)
+                        logging.debug(ex)
                         if retry_ct >= 20:
-                            print("abort transaction")
+                            logging.debug("abort transaction")
                             r.abortTransaction(txn_id)
                             try_query = False
                             raise ex
-                        if retry_ct > 3:
-                            time.sleep(0.01 * retry_ct * retry_ct)
+                        else:
+                            logging.debug("retry transaction ct %d" % retry_ct)
+                            if retry_ct > 3:
+                                time.sleep(0.01 * retry_ct * retry_ct)
                 if try_query:
                     r.abortTransaction(txn_id)
                     continue
