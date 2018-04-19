@@ -171,6 +171,16 @@ class PostgresDriver(abstractdriver.AbstractDriver):
         self.conn.commit()
 
     ## ----------------------------------------------
+    ## executeTransaction
+    ## ----------------------------------------------
+    def executeTransaction(self, txn, params):
+        try:
+            super(PostgresDriver, self).executeTransaction(txn, params)
+        except Exception as e:
+            self.conn.rollback()
+            raise e
+
+    ## ----------------------------------------------
     ## doDelivery
     ## ----------------------------------------------
     def doDelivery(self, params):
