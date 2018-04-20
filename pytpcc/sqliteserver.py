@@ -15,15 +15,15 @@ class SQLiteServer(object):
     def handle(self, connection, client_addr):
         conn = sqlite3.connect(self.database)
         self.logger.info("connected to %s" % self.database)
-        print(">>>>>>>>>>>>>>>>connected to %s" % self.database)
+        # print(">>>>>>>>>>>>>>>>connected to %s" % self.database)
         c = conn.cursor()
         try:
             while True:
                 data = connection.recv(4096)
-                print("received \"%s\"" % data)
+                # print("received \"%s\"" % data)
                 if data:
                     rpc = json.loads(data)
-                    print(rpc)
+                    # print(rpc)
                     try:
                         if rpc["command"] == "execute":
                             args = rpc["args"]
@@ -49,11 +49,11 @@ class SQLiteServer(object):
                             "success": False,
                             "error": str(e)
                         }
-                    print('sending data back to the client')
-                    print(res)
+                    # print('sending data back to the client')
+                    # print(res)
                     connection.sendall(json.dumps(res).encode("utf-8"))
                 else:
-                    print('no more data from', client_addr)
+                    print("no more data from", client_addr)
                     break
         finally:
             print("closing down")
