@@ -199,6 +199,8 @@ if __name__ == '__main__':
                          help='How long to run the benchmark in seconds')
     aparser.add_argument('--frac-read', default=None, type=float,
                          help='fraction of reads')
+    aparser.add_argument('--cffs-mount', default=None,
+                         help='mount point for CFFS (enables transactions)')
     aparser.add_argument('--ddl', default=os.path.realpath(os.path.join(os.path.dirname(__file__), "tpcc.sql")),
                          help='Path to the TPC-C DDL SQL file')
     aparser.add_argument('--clients', default=1, type=int, metavar='N',
@@ -259,6 +261,11 @@ if __name__ == '__main__':
             constants.TransactionTypes.PAYMENT: int(467 * (1 - f)),
             constants.TransactionTypes.NEW_ORDER: int(489 * (1 - f))
         }
+    if args['cffs_mount']:
+        cffs_ctl = cffs.Control(args['cffs_mount'])
+    else:
+        cffs_ctl = None
+
 
     driver.loadConfig(config)
     logging.info("Initializing TPC-C benchmark using %s" % driver)
@@ -286,7 +293,7 @@ if __name__ == '__main__':
     ## WORKLOAD DRIVER!!!
     if not args['no_execute']:
         if args['clients'] == 1:
-            e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'])
+            e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'], cffs_ctl=cffs_ctl)
             driver.executeStart()
             results = e.execute(args['duration'], args['timing_details'])
             driver.executeFinish()

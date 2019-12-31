@@ -44,10 +44,11 @@ from util import *
 
 class Executor:
     
-    def __init__(self, driver, scaleParameters, stop_on_error = False, weights=None):
+    def __init__(self, driver, scaleParameters, stop_on_error = False, weights=None, cffs_ctl=None):
         self.driver = driver
         self.scaleParameters = scaleParameters
         self.stop_on_error = stop_on_error
+        self.cffs_ctl = cffs_ctl
 
         if not weights:
             self.weights = {
@@ -92,9 +93,19 @@ class Executor:
                 retry_ct = 0
                 while try_query and (time.time() - start) <= duration:
                     try:
-                        val = self.driver.executeTransaction(txn, params)
+                        if self.cffs_ctl:
+                            self.cffs_ctl.begin()
+                            try:
+                                val = self.driver.executeTransaction(txn, params)
+                            except Exception as ex:
+                                self.cffs_ctl.abort()
+                                raise ex
+                            self.cffs_ctl.commit()
+                        else:
+                            val = self.driver.executeTransaction(txn, params)
                         try_query = False
                     except Exception as ex:
+                        print(ex)
                         retry_ct += 1
                         print("retry transaction ct %d" % retry_ct)
                         if retry_ct >= 20:
