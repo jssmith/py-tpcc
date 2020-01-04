@@ -266,7 +266,7 @@ if __name__ == '__main__':
     txn_stats_file = None
     if args['cffs_mount']:
         cffs_ctl = cffs.Control(args['cffs_mount'])
-        if os.environ['CFFS_STAT']:
+        if 'CFFS_STAT' in os.environ:
             txn_stats_file = "%s-%d.txn" % (os.environ['CFFS_STAT'], os.getpid())
 
 
