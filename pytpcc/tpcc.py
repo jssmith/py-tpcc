@@ -168,11 +168,16 @@ def executorFunc(driverClass, scaleParameters, args, config, debug):
     assert driver != None
     logging.debug("Starting client execution: %s" % driver)
     
+    cffs_ctl = None
+    if args['cffs_mount']:
+        cffs_ctl = cffs.Control(args['cffs_mount'])
+        cffs_ctl.begin()
+
     config['execute'] = True
     config['reset'] = False
     driver.loadConfig(config)
 
-    e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'])
+    e = executor.Executor(config, driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'], cffs_ctl=cffs_ctl)
     driver.executeStart()
     results = e.execute(args['duration'], args['timing_details'])
     driver.executeFinish()
@@ -266,9 +271,9 @@ if __name__ == '__main__':
     txn_stats_file = None
     if args['cffs_mount']:
         cffs_ctl = cffs.Control(args['cffs_mount'])
+        cffs_ctl.begin()
         if 'CFFS_STAT' in os.environ:
             txn_stats_file = "%s-%d.txn" % (os.environ['CFFS_STAT'], os.getpid())
-
 
     driver.loadConfig(config)
     logging.info("Initializing TPC-C benchmark using %s" % driver)
@@ -298,7 +303,7 @@ if __name__ == '__main__':
         if txn_stats_file:
             txn_stats = cffs.Stats()
         if args['clients'] == 1:
-            e = executor.Executor(driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'], cffs_ctl=cffs_ctl)
+            e = executor.Executor(config, driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'], cffs_ctl=cffs_ctl)
             driver.executeStart()
             results = e.execute(args['duration'], args['timing_details'])
             driver.executeFinish()

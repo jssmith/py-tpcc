@@ -35,6 +35,7 @@ import time
 import random
 import traceback
 import logging
+import sqlite3
 from datetime import datetime
 from pprint import pprint,pformat
 
@@ -44,7 +45,8 @@ from util import *
 
 class Executor:
     
-    def __init__(self, driver, scaleParameters, stop_on_error = False, weights=None, cffs_ctl=None):
+    def __init__(self, config, driver, scaleParameters, stop_on_error = False, weights=None, cffs_ctl=None):
+        self.config = config
         self.driver = driver
         self.scaleParameters = scaleParameters
         self.stop_on_error = stop_on_error
@@ -94,25 +96,53 @@ class Executor:
                 while try_query and (time.time() - start) <= duration:
                     try:
                         if self.cffs_ctl:
-                            self.cffs_ctl.begin()
                             try:
+#                                show SQLite change counter
+#                                db = open(self.driver.database, "rb")
+#                                db.seek(24)
+#                                print(list(db.read(4)))
+#                                db.close()
                                 val = self.driver.executeTransaction(txn, params)
                             except Exception as ex:
+                                if str(ex) == "database disk image is malformed":
+                                    print(ex)
+                                    sys.exit(1)
                                 self.cffs_ctl.abort()
                                 raise ex
                             self.cffs_ctl.commit()
+                            # start CFFS txn for next query
+                            self.cffs_ctl.begin()
                         else:
                             val = self.driver.executeTransaction(txn, params)
                         try_query = False
                     except Exception as ex:
-                        print(ex)
+                        if self.cffs_ctl:
+                            try:
+                                self.cffs_ctl.begin()
+                                self.driver.conn.close()
+                                self.cffs_ctl.abort()
+                            except Exception as ex:
+                                println("failed to properly close db", ex)
+                                sys.exit(1)
+                            # start CFFS txn for next query
+                            while True:
+                                try:
+                                    self.cffs_ctl.begin()
+                                    self.driver.loadConfig(self.config)
+                                    break
+                                except Exception as ex:
+                                    if str(ex) == "database disk image is malformed":
+                                        print(ex)
+                                        sys.exit(1)
+                                    self.cffs_ctl.abort()
                         retry_ct += 1
                         print("retry transaction ct %d" % retry_ct)
                         if retry_ct >= 20:
                             print("abort transaction")
-                            raise ex
+                            try_query = False
                         if retry_ct > 3:
                             time.sleep(0.01 * retry_ct * retry_ct)
+
                 if try_query:
                     r.abortTransaction(txn_id)
                     continue
