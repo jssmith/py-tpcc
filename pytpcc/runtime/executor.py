@@ -85,6 +85,9 @@ class Executor:
         start = r.startBenchmark()
         debug = logging.getLogger().isEnabledFor(logging.DEBUG)
 
+        reconnects = 0
+        reconnect_time = 0
+
         while (time.time() - start) <= duration:
             txn, params = self.doOne()
             txn_id = r.startTransaction(txn)
@@ -116,9 +119,11 @@ class Executor:
                             val = self.driver.executeTransaction(txn, params)
                         try_query = False
                     except Exception as ex:
+                        print("query failed:", ex)
                         if self.cffs_ctl:
+                            startConnect = time.time()
+                            self.cffs_ctl.begin()
                             try:
-                                self.cffs_ctl.begin()
                                 self.driver.conn.close()
                                 self.cffs_ctl.abort()
                             except Exception as ex:
@@ -126,22 +131,26 @@ class Executor:
                                 sys.exit(1)
                             # start CFFS txn for next query
                             while True:
+                                self.cffs_ctl.begin()
                                 try:
-                                    self.cffs_ctl.begin()
                                     self.driver.loadConfig(self.config)
                                     break
                                 except Exception as ex:
+                                    print("reconnect failed:", ex)
                                     if str(ex) == "database disk image is malformed":
-                                        print(ex)
                                         sys.exit(1)
                                     self.cffs_ctl.abort()
+                            reconnects += 1
+                            reconnect_time += time.time() - startConnect
                         retry_ct += 1
                         print("retry transaction ct %d" % retry_ct)
                         if retry_ct >= 20:
                             print("abort transaction")
+                            r.abortTransaction(txn_id)
                             try_query = False
-                        if retry_ct > 3:
-                            time.sleep(0.01 * retry_ct * retry_ct)
+                            raise ex
+#                        if retry_ct > 3:
+#                            time.sleep(0.01 * retry_ct * retry_ct)
 
                 if try_query:
                     r.abortTransaction(txn_id)
@@ -159,8 +168,12 @@ class Executor:
             
             r.stopTransaction(txn_id)
         ## WHILE
-            
+        
         r.stopBenchmark()
+
+        if reconnects > 0:
+            print(reconnects, "reconnects took", (reconnect_time / reconnects), "on average")
+
         return (r)
     ## DEF
     
