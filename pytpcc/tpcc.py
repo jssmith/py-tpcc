@@ -270,12 +270,22 @@ if __name__ == '__main__':
     cffs_ctl = None
     txn_stats_file = None
     if args['cffs_mount']:
-        cffs_ctl = cffs.Control(args['cffs_mount'])
-        cffs_ctl.begin()
         if 'CFFS_STAT' in os.environ:
             txn_stats_file = "%s-%d.txn" % (os.environ['CFFS_STAT'], os.getpid())
+        cffs_ctl = cffs.Control(args['cffs_mount'])
+        while True:
+            cffs_ctl.begin()
+            try:
+                driver.loadConfig(config)
+                break
+            except Exception as ex:
+                print("db connect failed:", ex)
+                if str(ex) == "database disk image is malformed":
+                    sys.exit(1)
+                self.cffs_ctl.abort()
+    else:
+        driver.loadConfig(config)
 
-    driver.loadConfig(config)
     logging.info("Initializing TPC-C benchmark using %s" % driver)
 
     ## Create ScaleParameters

@@ -119,8 +119,8 @@ class Executor:
                             val = self.driver.executeTransaction(txn, params)
                         try_query = False
                     except Exception as ex:
-                        print("query failed:", ex)
                         if self.cffs_ctl:
+                            print("transaction failed, reconnecting")
                             startConnect = time.time()
                             self.cffs_ctl.begin()
                             try:
@@ -142,13 +142,15 @@ class Executor:
                                     self.cffs_ctl.abort()
                             reconnects += 1
                             reconnect_time += time.time() - startConnect
-                        retry_ct += 1
-                        print("retry transaction ct %d" % retry_ct)
-                        if retry_ct >= 20:
-                            print("abort transaction")
-                            r.abortTransaction(txn_id)
-                            try_query = False
-                            raise ex
+                        else:
+                            print("query failed:", ex)
+#                        retry_ct += 1
+#                        print("retry transaction ct %d" % retry_ct)
+#                        if retry_ct >= 20:
+#                            print("abort transaction")
+#                            r.abortTransaction(txn_id)
+#                            try_query = False
+#                            raise ex
 #                        if retry_ct > 3:
 #                            time.sleep(0.01 * retry_ct * retry_ct)
 
