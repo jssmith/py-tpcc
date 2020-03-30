@@ -330,5 +330,8 @@ if __name__ == '__main__':
             print("stats written to %s" % txn_stats_file)
         print(results.show(load_time))
     ## IF
+
+    if cffs_ctl:
+        cffs_ctl.commit()
     
 ## MAIN
