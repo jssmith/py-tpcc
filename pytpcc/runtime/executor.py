@@ -108,7 +108,7 @@ class Executor:
                                 val = self.driver.executeTransaction(txn, params)
                             except Exception as ex:
                                 if str(ex) == "database disk image is malformed":
-                                    print(ex)
+                                    print(ex, file=sys.stderr)
                                     sys.exit(1)
                                 self.cffs_ctl.abort()
                                 raise ex
@@ -120,14 +120,14 @@ class Executor:
                         try_query = False
                     except Exception as ex:
                         if self.cffs_ctl:
-                            print("transaction failed, reconnecting")
+                            print("transaction failed, reconnecting", file=sys.stderr)
                             startConnect = time.time()
                             self.cffs_ctl.begin()
                             try:
                                 self.driver.conn.close()
                                 self.cffs_ctl.abort()
                             except Exception as ex:
-                                println("failed to properly close db", ex)
+                                println("failed to properly close db", ex, file=sys.stderr)
                                 sys.exit(1)
                             # start CFFS txn for next query
                             while True:
@@ -136,14 +136,14 @@ class Executor:
                                     self.driver.loadConfig(self.config)
                                     break
                                 except Exception as ex:
-                                    print("reconnect failed:", ex)
+                                    print("reconnect failed:", ex, file=sys.stderr)
                                     if str(ex) == "database disk image is malformed":
                                         sys.exit(1)
                                     self.cffs_ctl.abort()
                             reconnects += 1
                             reconnect_time += time.time() - startConnect
                         else:
-                            print("query failed:", ex)
+                            print("query failed:", ex, file=sys.stderr)
 #                        retry_ct += 1
 #                        print("retry transaction ct %d" % retry_ct)
 #                        if retry_ct >= 20:
