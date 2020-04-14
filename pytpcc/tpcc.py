@@ -282,7 +282,7 @@ if __name__ == '__main__':
                 print("db connect failed:", ex, file=sys.stderr)
                 if str(ex) == "database disk image is malformed":
                     sys.exit(1)
-                self.cffs_ctl.abort()
+                cffs_ctl.abort()
     else:
         driver.loadConfig(config)
 
