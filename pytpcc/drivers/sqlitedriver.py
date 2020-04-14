@@ -161,7 +161,7 @@ class SqliteDriver(abstractdriver.AbstractDriver):
             if self.cache_size != current_cache_size:
                 self.cursor.execute("PRAGMA cache_size=-%d" % self.cache_size)
         except sqlite3.OperationalError as err:
-            print(err)
+            print(err, file=sys.stderr)
 
         try:
             self.cursor.execute("PRAGMA locking_mode")
@@ -169,7 +169,7 @@ class SqliteDriver(abstractdriver.AbstractDriver):
             if self.locking_mode != current_locking_mode:
                 self.cursor.execute("PRAGMA locking_mode=%s" % self.locking_mode)
         except sqlite3.OperationalError as err:
-            print(err)
+            print(err, file=sys.stderr)
 
         try:
             self.cursor.execute("PRAGMA journal_mode")
@@ -177,7 +177,7 @@ class SqliteDriver(abstractdriver.AbstractDriver):
             if self.journal_mode != current_journal_mode:
                 self.cursor.execute("PRAGMA journal_mode=%s" % self.journal_mode)
         except sqlite3.OperationalError as err:
-            print(err)
+            print(err, file=sys.stderr)
 
         if config["reset"]:
             with open(self.ddl) as ddl:

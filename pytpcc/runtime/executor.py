@@ -94,81 +94,52 @@ class Executor:
             
             if debug: logging.debug("Executing '%s' transaction" % txn)
             try:
-                try_query = True
-                retry_ct = 0
-                while try_query and (time.time() - start) <= duration:
+                if self.cffs_ctl:
                     try:
-                        if self.cffs_ctl:
-                            try:
-#                                show SQLite change counter
-#                                db = open(self.driver.database, "rb")
-#                                db.seek(24)
-#                                print(list(db.read(4)))
-#                                db.close()
-                                val = self.driver.executeTransaction(txn, params)
-                            except Exception as ex:
-                                if str(ex) == "database disk image is malformed":
-                                    print(ex)
-                                    sys.exit(1)
-                                self.cffs_ctl.abort()
-                                raise ex
-                            self.cffs_ctl.commit()
-                            # start CFFS txn for next query
-                            self.cffs_ctl.begin()
-                        else:
-                            val = self.driver.executeTransaction(txn, params)
-                        try_query = False
+                        val = self.driver.executeTransaction(txn, params)
                     except Exception as ex:
-                        if self.cffs_ctl:
-                            print("transaction failed, reconnecting")
-                            startConnect = time.time()
-                            self.cffs_ctl.begin()
-                            try:
-                                self.driver.conn.close()
-                                self.cffs_ctl.abort()
-                            except Exception as ex:
-                                println("failed to properly close db", ex)
-                                sys.exit(1)
-                            # start CFFS txn for next query
-                            while True:
-                                self.cffs_ctl.begin()
-                                try:
-                                    self.driver.loadConfig(self.config)
-                                    break
-                                except Exception as ex:
-                                    print("reconnect failed:", ex)
-                                    if str(ex) == "database disk image is malformed":
-                                        sys.exit(1)
-                                    self.cffs_ctl.abort()
-                            reconnects += 1
-                            reconnect_time += time.time() - startConnect
-                        else:
-                            print("query failed:", ex)
-#                        retry_ct += 1
-#                        print("retry transaction ct %d" % retry_ct)
-#                        if retry_ct >= 20:
-#                            print("abort transaction")
-#                            r.abortTransaction(txn_id)
-#                            try_query = False
-#                            raise ex
-#                        if retry_ct > 3:
-#                            time.sleep(0.01 * retry_ct * retry_ct)
-
-                if try_query:
-                    r.abortTransaction(txn_id)
-                    continue
+                        r.abortTransaction(txn_id)
+                        if str(ex) == "database disk image is malformed":
+                            print(ex, file=sys.stderr)
+                            sys.exit(1)
+                    self.cffs_ctl.commit()
+                    # start CFFS txn for next query
+                    self.cffs_ctl.begin()
+                else:
+                    val = self.driver.executeTransaction(txn, params)
+                if r.hasTransaction(txn_id):
+                    r.stopTransaction(txn_id)
             except KeyboardInterrupt:
                 return -1
-            except (Exception, AssertionError) as ex:
-                logging.warn("Failed to execute Transaction '%s': %s" % (txn, ex))
-                if debug: traceback.print_exc(file=sys.stdout)
-                if self.stop_on_error: raise
-                r.abortTransaction(txn_id)
-                continue
-
-            #if debug: logging.debug("%s\nParameters:\n%s\nResult:\n%s" % (txn, pformat(params), pformat(val)))
-            
-            r.stopTransaction(txn_id)
+            except Exception as ex:
+                if r.hasTransaction(txn_id):
+                    r.abortTransaction(txn_id)
+                if self.cffs_ctl:
+                    if debug: logging.debug("transaction failed, reconnecting")
+                    startConnect = time.time()
+                    self.cffs_ctl.begin()
+                    try:
+                        self.driver.conn.close()
+                        self.cffs_ctl.abort()
+                    except Exception as ex:
+                        print("failed to properly close db", ex, file=sys.stderr)
+                        sys.exit(1)
+                    # start CFFS txn for next query
+                    while True:
+                        self.cffs_ctl.begin()
+                        try:
+                            self.driver.loadConfig(self.config)
+                            break
+                        except Exception as ex:
+                            if str(ex) == "database disk image is malformed":
+                                print("reconnect failed:", ex, file=sys.stderr)
+                                sys.exit(1)
+                            if debug: logging.debug("reconnect failed: %s" % ex)
+                            self.cffs_ctl.abort()
+                    reconnects += 1
+                    reconnect_time += time.time() - startConnect
+                else:
+                    print("query failed:", ex, file=sys.stderr)
         ## WHILE
         
         r.stopBenchmark()
