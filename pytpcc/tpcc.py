@@ -268,10 +268,7 @@ if __name__ == '__main__':
         }
 
     cffs_ctl = None
-    txn_stats_file = None
     if args['cffs_mount']:
-        if 'CFFS_STAT' in os.environ:
-            txn_stats_file = "%s-%d.txn" % (os.environ['CFFS_STAT'], os.getpid())
         cffs_ctl = cffs.Control(args['cffs_mount'])
         while True:
             cffs_ctl.begin()
@@ -310,8 +307,6 @@ if __name__ == '__main__':
     
     ## WORKLOAD DRIVER!!!
     if not args['no_execute']:
-        if txn_stats_file:
-            txn_stats = cffs.Stats()
         if args['clients'] == 1:
             e = executor.Executor(config, driver, scaleParameters, stop_on_error=args['stop_on_error'], weights=config['txn_weights'], cffs_ctl=cffs_ctl)
             driver.executeStart()
@@ -323,11 +318,6 @@ if __name__ == '__main__':
         if args['json_output']:
             json.dump(results.data(load_time), args['json_output'])
             args['json_output'].write("\n")
-        if txn_stats_file:
-            with open(txn_stats_file, "w") as f:
-                for k, vals in txn_stats.finish().items():
-                    f.write("%d,%s\n" % (k, ",".join([str(x) for x in vals])))
-            print("stats written to %s" % txn_stats_file)
         print(results.show(load_time))
     ## IF
 
