@@ -84,6 +84,7 @@ class Executor:
         debug = logging.getLogger().isEnabledFor(logging.DEBUG)
 
         while (time.time() - start) <= duration:
+            time.sleep(0.01)
             txn, params = self.doOne()
             txn_id = r.startTransaction(txn)
             
@@ -96,8 +97,11 @@ class Executor:
                         if self.cffs_ctl:
                             self.cffs_ctl.begin()
                             try:
+                                self.driver.setup()
                                 val = self.driver.executeTransaction(txn, params)
                             except Exception as ex:
+                                print('have exception', ex)
+                                self.driver.abort()
                                 self.cffs_ctl.abort()
                                 raise ex
                             self.cffs_ctl.commit()
@@ -107,12 +111,16 @@ class Executor:
                     except Exception as ex:
                         print(ex)
                         retry_ct += 1
-                        print("retry transaction ct %d" % retry_ct)
-                        if retry_ct >= 20:
-                            print("abort transaction")
+                        if retry_ct >= 3:
+                            print('retry ct exceeded')
                             raise ex
-                        if retry_ct > 3:
-                            time.sleep(0.01 * retry_ct * retry_ct)
+                        else:
+                            time.sleep(0.001 * retry_ct)
+                        # if retry_ct >= 20:
+                        #     print("abort transaction")
+                        #     raise ex
+                        # if retry_ct > 3:
+                        #     time.sleep(0.01 * retry_ct * retry_ct)
                 if try_query:
                     r.abortTransaction(txn_id)
                     continue
