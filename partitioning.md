@@ -1,32 +1,12 @@
-Notes for partitioning the TPC-C workload
+# Notes for partitioning the TPC-C workload.
 
-customer
-partition by col 3 (C_W_ID)
+1. Start out by creating the tpcc-initial database.
+2. Next use SQLite's dump command to dump each table to a separate file.
+3. Use the [tpccsplit](https://github.com/jssmith/cffseval/tree/gen_scripts/gen/tpccsplit) program in cffseval to split the dump files into per-database files.
+4. Import the dumps into new SQLite databases using the script below.
 
-history
-partition by col 5 (H_W_ID)
 
-new_order
-partition by col 3 (NO_W_ID)
-
-order_line
-partition by col 3 (OL_W_ID)
-
-warehouse
-partition by col 1 (W_ID)
-
-district
-partition by col 2 (D_W_ID)
-
-item
-replicate to all
-
-orders
-partition by col 4 (O_W_ID)
-
-stock
-partition by col 2 (S_W_ID)
-
+Import script
 
 ```
 #!/bin/bash
@@ -34,16 +14,24 @@ partition by col 2 (S_W_ID)
 for p in $(seq 1 32); do
 	for t in $(cat tables.txt); do
 		echo "import $t to partition $p"
-		#cat $t-$p.dump | sqlite3 db-$p.dat
+		cat $t-$p.dump | sqlite3 db-$p.dat
 	done
 done
 ```
 
-docker run -it --rm \
-    -v /Users/jssmith/d/tpcc-split:/tpcc-split \
-    -v /Users/jssmith/d/cffseval/task/tpcc/py-tpcc:/py-tpcc \
-    lambci/lambda:build-python3.7 /bin/bash
+Here is sample SQLite syntax for attaching to a database partition.
 
+Just run `sqlite3` then type the following.
 
+```
 attach database /tpcc-split/dbp/db-10.dat as p10;
 SELECT W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP FROM p10.WAREHOUSE WHERE W_ID = 10;
+```
+
+This Docker command is useful for working with TPC-C splits
+```
+docker run -it --rm \
+    -v $WORKDIR/tpcc-split:/tpcc-split \
+    -v $WORKDIR/cffseval/task/tpcc/py-tpcc:/py-tpcc \
+    lambci/lambda:build-python3.7 /bin/bash
+```
