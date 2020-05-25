@@ -40,6 +40,8 @@ class Results:
         
         self.txn_counters = { }
         self.txn_times = { }
+        self.txn_counters_aborted = { }
+        self.txn_times_aborted = { }
         self.running = { }
 
         
@@ -68,6 +70,14 @@ class Results:
         assert id in self.running
         txn_name, txn_start = self.running[id]
         del self.running[id]
+
+        txn_end = time.time()
+        duration = txn_end - txn_start
+        total_time = self.txn_times_aborted.get(txn_name, 0)
+        self.txn_times_aborted[txn_name] = total_time + duration
+
+        total_cnt = self.txn_counters_aborted.get(txn_name, 0)
+        self.txn_counters_aborted[txn_name] = total_cnt + 1
 
         if self.log_timing_details:
             txn_end = time.time()
@@ -142,7 +152,20 @@ class Results:
             res["Txns"].append({ "Txn": txn, "Ct": txn_cnt, "Time": txn_time })
             total_time += txn_time
             total_cnt += txn_cnt
+
+        total_aborted_time = 0
+        total_aborted_cnt = 0
+        res["TxnsAborted"] = []
+        for txn in sorted(self.txn_counters_aborted.keys()):
+            txn_aborted_time = self.txn_times_aborted[txn]
+            txn_aborted_cnt = self.txn_counters_aborted[txn]
+            rate = txn_aborted_cnt / txn_aborted_time
+            res["TxnsAborted"].append({ "Txn": txn, "Ct": txn_aborted_cnt, "Time": txn_aborted_time })
+            total_aborted_time += txn_aborted_time
+            total_aborted_cnt += txn_aborted_cnt
+
         res["TxnsTotal"] = { "Ct": total_cnt, "Time": total_time, "Duration": duration }
+        res["TxnsAbortedTotal"] = { "Ct": total_aborted_cnt, "Time": total_aborted_time, "Duration": duration }
         if self.log_timing_details:
             res["TxnsDetail"] = self.timing_details
         return res
