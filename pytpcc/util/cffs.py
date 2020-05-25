@@ -10,7 +10,7 @@ class Control:
             try:
                 self.cffs_fd = os.open(cffs_path, os.O_RDWR)
                 break
-            except ex:
+            except Exception as ex:
                 print(ex, file=sys.stderr)
                 pass
 
