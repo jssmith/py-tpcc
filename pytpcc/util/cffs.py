@@ -1,6 +1,7 @@
 import fcntl
 import http.client
 import os
+import sys
 
 from collections import OrderedDict
 
@@ -12,7 +13,6 @@ class Control:
                 break
             except Exception as ex:
                 print(ex, file=sys.stderr)
-                pass
 
     def begin(self):
         fcntl.ioctl(self.cffs_fd, 0xCF000001)
