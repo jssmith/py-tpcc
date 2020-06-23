@@ -63,7 +63,7 @@ def attach(c, p):
         c.execute("ATTACH DATABASE '%s' AS P%d" % (dbname, p))
         activated_partitions.add(p)
     else:
-        logging.debug("Already attached to databae %s" % dbname)
+        logging.debug("Already attached to database %s" % dbname)
 
 def execQuery(c, query, partitions, args):
     sql = query % partitions

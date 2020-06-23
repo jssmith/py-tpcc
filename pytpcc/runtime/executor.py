@@ -106,6 +106,7 @@ class Executor:
                                 raise ex
                             self.cffs_ctl.commit()
                         else:
+                            self.driver.setup()
                             val = self.driver.executeTransaction(txn, params)
                         try_query = False
                     except Exception as ex:
