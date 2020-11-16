@@ -65,6 +65,9 @@ class Results:
         self.running[id] = (txn, time.time())
         return id
         
+    def hasTransaction(self, id):
+        return id in self.running
+        
     def abortTransaction(self, id):
         """Abort a transaction and discard its times"""
         assert id in self.running
