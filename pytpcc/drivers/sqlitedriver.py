@@ -160,9 +160,8 @@ class SqliteDriver(abstractdriver.AbstractDriver):
         self.locking_mode = str(config["locking_mode"]).lower()
         self.cache_size = int(config["cache_size"])
 
-        self.conn = None
-
-        self.setup()
+        self.conn = sqlite3.connect(self.database)
+        self.cursor = self.conn.cursor()
 
         try:
             self.cursor.execute("PRAGMA cache_size")
@@ -170,7 +169,7 @@ class SqliteDriver(abstractdriver.AbstractDriver):
             if self.cache_size != current_cache_size:
                 self.cursor.execute("PRAGMA cache_size=-%d" % self.cache_size)
         except sqlite3.OperationalError as err:
-            print(err)
+            print(err, file=sys.stderr)
 
         try:
             self.cursor.execute("PRAGMA locking_mode")
@@ -178,7 +177,7 @@ class SqliteDriver(abstractdriver.AbstractDriver):
             if self.locking_mode != current_locking_mode:
                 self.cursor.execute("PRAGMA locking_mode=%s" % self.locking_mode)
         except sqlite3.OperationalError as err:
-            print(err)
+            print(err, file=sys.stderr)
 
         try:
             self.cursor.execute("PRAGMA journal_mode")
@@ -186,35 +185,7 @@ class SqliteDriver(abstractdriver.AbstractDriver):
             if self.journal_mode != current_journal_mode:
                 self.cursor.execute("PRAGMA journal_mode=%s" % self.journal_mode)
         except sqlite3.OperationalError as err:
-            print(err)
-
-
-    def setup(self):
-        logging.debug("entering setup")
-        if self.conn:
-            self.abort()
-        logging.debug("setup new db connection")
-        self.conn = sqlite3.connect(":memory:")
-        self.cursor = self.conn.cursor()
-        global activated_partitions
-        activated_partitions = set()
-
-    def abort(self):
-        logging.debug("close connections")
-        if self.cursor:
-            try:
-                logging.debug("close down cursor")
-                self.cursor.close()
-            except Exception as err:
-                print(err)
-            self.cursor = None
-        if self.conn:
-            try:
-                logging.debug("close down connection")
-                self.conn.close()
-            except Exception as err:
-                print(err)
-            self.conn = None
+            print(err, file=sys.stderr)
 
     ## ----------------------------------------------
     ## loadTuples

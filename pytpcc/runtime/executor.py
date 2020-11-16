@@ -35,6 +35,7 @@ import time
 import random
 import traceback
 import logging
+import sqlite3
 from datetime import datetime
 from pprint import pprint,pformat
 
@@ -44,7 +45,8 @@ from util import *
 
 class Executor:
     
-    def __init__(self, driver, scaleParameters, stop_on_error = False, weights=None, cffs_ctl=None):
+    def __init__(self, config, driver, scaleParameters, stop_on_error = False, weights=None, cffs_ctl=None):
+        self.config = config
         self.driver = driver
         self.scaleParameters = scaleParameters
         self.stop_on_error = stop_on_error
@@ -83,6 +85,9 @@ class Executor:
         start = r.startBenchmark()
         debug = logging.getLogger().isEnabledFor(logging.DEBUG)
 
+        reconnects = 0
+        reconnect_time = 0
+
         while (time.time() - start) <= duration:
             time.sleep(0.01)
             txn, params = self.doOne()
@@ -90,56 +95,59 @@ class Executor:
             
             if debug: logging.debug("Executing '%s' transaction" % txn)
             try:
-                try_query = True
-                retry_ct = 0
-                while try_query and (time.time() - start) <= duration:
+                if self.cffs_ctl:
                     try:
-                        if self.cffs_ctl:
-                            self.cffs_ctl.begin()
-                            try:
-                                self.driver.setup()
-                                val = self.driver.executeTransaction(txn, params)
-                            except Exception as ex:
-                                print('have exception', ex)
-                                self.driver.abort()
-                                self.cffs_ctl.abort()
-                                raise ex
-                            self.cffs_ctl.commit()
-                        else:
-                            self.driver.setup()
-                            val = self.driver.executeTransaction(txn, params)
-                        try_query = False
+                        val = self.driver.executeTransaction(txn, params)
                     except Exception as ex:
-                        print(ex)
-                        retry_ct += 1
-                        if retry_ct >= 3:
-                            print('retry ct exceeded')
-                            raise ex
-                        else:
-                            time.sleep(0.001 * retry_ct)
-                        # if retry_ct >= 20:
-                        #     print("abort transaction")
-                        #     raise ex
-                        # if retry_ct > 3:
-                        #     time.sleep(0.01 * retry_ct * retry_ct)
-                if try_query:
-                    r.abortTransaction(txn_id)
-                    continue
+                        r.abortTransaction(txn_id)
+                        if str(ex) == "database disk image is malformed":
+                            print(ex, file=sys.stderr)
+                            sys.exit(1)
+                    self.cffs_ctl.commit()
+                    # start CFFS txn for next query
+                    self.cffs_ctl.begin()
+                else:
+                    val = self.driver.executeTransaction(txn, params)
+                if r.hasTransaction(txn_id):
+                    r.stopTransaction(txn_id)
             except KeyboardInterrupt:
                 return -1
-            except (Exception, AssertionError) as ex:
-                logging.warn("Failed to execute Transaction '%s': %s" % (txn, ex))
-                if debug: traceback.print_exc(file=sys.stdout)
-                if self.stop_on_error: raise
-                r.abortTransaction(txn_id)
-                continue
-
-            #if debug: logging.debug("%s\nParameters:\n%s\nResult:\n%s" % (txn, pformat(params), pformat(val)))
-            
-            r.stopTransaction(txn_id)
+            except Exception as ex:
+                if r.hasTransaction(txn_id):
+                    r.abortTransaction(txn_id)
+                if self.cffs_ctl:
+                    if debug: logging.debug("transaction failed, reconnecting")
+                    startConnect = time.time()
+                    self.cffs_ctl.begin()
+                    try:
+                        self.driver.conn.close()
+                        self.cffs_ctl.abort()
+                    except Exception as ex:
+                        print("failed to properly close db", ex, file=sys.stderr)
+                        sys.exit(1)
+                    # start CFFS txn for next query
+                    while True:
+                        self.cffs_ctl.begin()
+                        try:
+                            self.driver.loadConfig(self.config)
+                            break
+                        except Exception as ex:
+                            if str(ex) == "database disk image is malformed":
+                                print("reconnect failed:", ex, file=sys.stderr)
+                                sys.exit(1)
+                            if debug: logging.debug("reconnect failed: %s" % ex)
+                            self.cffs_ctl.abort()
+                    reconnects += 1
+                    reconnect_time += time.time() - startConnect
+                else:
+                    print("query failed:", ex, file=sys.stderr)
         ## WHILE
             
         r.stopBenchmark()
+
+        if reconnects > 0:
+            print(reconnects, "reconnects took", (reconnect_time / reconnects), "on average")
+
         return (r)
     ## DEF
     
